@@ -5,6 +5,19 @@ float total_acceleration;
 int accel = 0x53; // I2C address for this sensor (from data sheet)
 float x, y, z;
 
+// Flags and Checkpoints Initializing
+int steps = 0;
+
+bool any_peak_detected = false;
+bool first_peak_detected = false;
+//unsigned long first_peak_time = 0;
+//unsigned long second_peak_time = 0;
+
+int upper_threshold = 90000;
+int lower_threshold = 70000;
+
+int peak_period = 0;
+
 void setup() {
   Serial.begin(9600);
   Wire.begin(); // Initialize serial communications
@@ -27,5 +40,25 @@ void loop() {
 
   total_acceleration = sqrt(x*x + y*y + z*z);
   Serial.println(total_acceleration);
-  delay(200);
+
+  if (total_acceleration > upper_threshold && any_peak_detected == false) {
+    any_peak_detected = true;
+
+    if (first_peak_detected == false) {
+      //first_peak_time = millis();
+      first_peak_detected = true;    
+
+    } else {
+      //second_pulse_time = millis();
+      //pulse_period = second_pulse_time - first_pulse_time;        
+      steps = steps + 1;
+      first_peak_detected = false;
+    }
+  }
+
+  if (total_acceleration < lower_threshold) {
+    any_peak_detected = false;
+  }
+  Serial.println(steps);
+  delay(60);
 }
