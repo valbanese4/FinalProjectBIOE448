@@ -1,6 +1,7 @@
 #include <Wire.h> // Necessary for I2C communication
 #include <LiquidCrystal.h>
 LiquidCrystal lcd(10, 8, 5, 4, 3, 2);
+float total_acceleration;
 int accel = 0x53; // I2C address for this sensor (from data sheet)
 float x, y, z;
 
@@ -24,11 +25,7 @@ void loop() {
   y = (Wire.read() | Wire.read() << 8); // Parse y values
   y = (Wire.read() | Wire.read() << 8); // Parse z values
 
-  Serial.print("x = "); // Print values
-  Serial.print(x);
-  Serial.print(", y = ");
-  Serial.print(y);
-  Serial.print(", z = ");
-  Serial.println(z);
+  total_acceleration = sqrt(x*x + y*y + z*z);
+  Serial.println(total_acceleration);
   delay(200);
 }
