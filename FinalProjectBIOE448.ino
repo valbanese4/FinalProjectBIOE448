@@ -4,11 +4,15 @@ LiquidCrystal lcd(10, 8, 5, 4, 3, 2);
 float total_acceleration;
 int accel = 0x53; // I2C address for this sensor (from data sheet)
 float x, y, z;
+float distance;
 
 // Flags and Checkpoints Initializing
 int steps = 0;
 bool any_peak_detected = false;
 int threshold = 450;
+
+// Defining average stride length for women 
+float stridelength = 2.2; //feet
 
 void setup() {
   Serial.begin(9600);
@@ -19,6 +23,8 @@ void setup() {
   Wire.endTransmission();
   lcd.begin(16, 2); //Initiate the LCD in a 16x2 configuration
   lcd.print("Steps: ");
+  lcd.setCursor(0,1);
+  lcd.print("Distance: ");
 }
 
 void loop() {
@@ -43,6 +49,7 @@ void loop() {
 
   if (total_acceleration > threshold && any_peak_detected == false) {
     steps = steps + 1;
+    distance = steps*stridelength;
     any_peak_detected = true;
   }
 
@@ -51,7 +58,10 @@ void loop() {
   }
 
   Serial.println(steps);
+  Serial.println(distance);
   delay(50);
   lcd.setCursor(7,0);
   lcd.print(steps);
+  lcd.setCursor(10,1);
+  lcd.print(distance);
 }
