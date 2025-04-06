@@ -4,20 +4,11 @@ LiquidCrystal lcd(10, 8, 5, 4, 3, 2);
 float total_acceleration;
 int accel = 0x53; // I2C address for this sensor (from data sheet)
 float x, y, z;
-float xmod, ymod, zmod;
 
 // Flags and Checkpoints Initializing
 int steps = 0;
-
 bool any_peak_detected = false;
-bool first_peak_detected = false;
-//unsigned long first_peak_time = 0;
-//unsigned long second_peak_time = 0;
-
-int upper_threshold = 450;
-int lower_threshold = 400;
-
-int peak_period = 0;
+int threshold = 450;
 
 void setup() {
   Serial.begin(9600);
@@ -50,12 +41,12 @@ void loop() {
   total_acceleration = sqrt(2*x*x + 2*y*y + z*z);
   Serial.println(total_acceleration);
 
-  if (total_acceleration > upper_threshold && any_peak_detected == false) {
+  if (total_acceleration > threshold && any_peak_detected == false) {
     steps = steps + 1;
     any_peak_detected = true;
   }
 
-  if (total_acceleration < lower_threshold && any_peak_detected == true) {
+  if (total_acceleration < threshold && any_peak_detected == true) {
     any_peak_detected = false;
   }
 
