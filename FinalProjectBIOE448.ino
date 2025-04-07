@@ -5,6 +5,8 @@ float total_acceleration;
 int accel = 0x53; // I2C address for this sensor (from data sheet)
 float x, y, z;
 float distance;
+float last_step_time;
+const int LEDPin = 6;
 
 // Flags and Checkpoints Initializing
 int steps = 0;
@@ -16,6 +18,7 @@ float stridelength = 2.2; //feet
 
 void setup() {
   Serial.begin(9600);
+  pinMode(LEDPin, OUTPUT); // red LED
   Wire.begin(); // Initialize serial communications
   Wire.beginTransmission(accel); // Start communicating with the device
   Wire.write(0x2D); // Enable measurement
@@ -25,6 +28,7 @@ void setup() {
   lcd.print("Steps: ");
   lcd.setCursor(0,1);
   lcd.print("Distance: ");
+  
 }
 
 void loop() {
@@ -51,10 +55,18 @@ void loop() {
     steps = steps + 1;
     distance = steps*stridelength;
     any_peak_detected = true;
+    last_step_time = millis();
+    digitalWrite(LEDPin, LOW);
   }
 
   if (total_acceleration < threshold && any_peak_detected == true) {
     any_peak_detected = false;
+    
+  }
+
+  if (millis() - last_step_time > 5*60*1000) {
+      //Turns the LED on
+      digitalWrite(LEDPin, HIGH);
   }
 
   Serial.println(steps);
@@ -64,4 +76,5 @@ void loop() {
   lcd.print(steps);
   lcd.setCursor(10,1);
   lcd.print(distance);
+
 }
