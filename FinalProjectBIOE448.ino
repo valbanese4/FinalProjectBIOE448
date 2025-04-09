@@ -1,37 +1,88 @@
 #include <Wire.h> // Necessary for I2C communication
 #include <LiquidCrystal.h> // Necessary for LCD communication 
+#include <ArduinoBLE.h>
+
+// Initialization of LCD Screen
 LiquidCrystal lcd(10, 8, 5, 4, 3, 2); 
-float total_acceleration;
+
+// Initializaion of Bluetooth
+BLEService newService("180A");
+BLEByteCharacteristic read_Steps("2A57", BLERead);
+BLEByteCharacteristic read_Distance("2A58", BLERead);
+BLEByteCharacteristic read_IdleTime("2A59", BLERead);
+
+
+// Initialization of Step Counter
+float total_acceleration; 
 int accel = 0x53; // I2C address for this sensor (from data sheet)
 float x, y, z;
+
+// Initialization of Additional Features
 float distance;
 float last_step_time;
-const int LEDPin = 6;
+const int Idle_Indicator = 6;
+const int BluetoothStatus = 7;
+char command;
 
-// Flags and Checkpoints Initializing
+// Defining average stride length for women 
+float stridelength = 0.67; //meters
+
+// Initialization of Flags and Checkpoints
 int steps = 0;
 bool any_peak_detected = false;
 int threshold = 450;
 
-// Defining average stride length for women 
-float stridelength = 2.2; //feet
-
 void setup() {
   Serial.begin(9600);
-  pinMode(LEDPin, OUTPUT); // red LED
+
+  // Bluetooth Signal Setup
+  while(!Serial);
+  if (!BLE.begin()){
+    Serial.println("Waiting for ArduinoBLE");
+    while(1);
+  }
+  
+  BLE.setLocalName("Pedometer3");
+  BLE.setAdvertisedService(newService);
+  newService.addCharacteristic(read_Steps);
+  newService.addCharacteristic(read_Distance);
+  newService.addCharacteristic(read_IdleTime);
+
+  BLE.addService(newService);
+  
+  read_Steps.writeValue(0);
+  read_Distance.writeValue(0);
+  read_IdleTime.writeValue(0);
+
+  BLE.advertise();
+  Serial.println("Bluetooth device active");
+
+  // Pedometer + Extra Features Setup
   Wire.begin(); // Initialize serial communications
   Wire.beginTransmission(accel); // Start communicating with the device
   Wire.write(0x2D); // Enable measurement
   Wire.write(8); // Get sample measurement
   Wire.endTransmission();
+
   lcd.begin(16, 2); //Initiate the LCD in a 16x2 configuration
   lcd.print("Steps: ");
   lcd.setCursor(0,1);
   lcd.print("Distance: ");
-  
+  pinMode(Idle_Indicator, OUTPUT); // red idle LED
+  pinMode(BluetoothStatus, OUTPUT); // red idle LED
 }
 
 void loop() {
+  BLEDevice central = BLE.central(); // wait for a BLE central
+
+   if (central) {  // if a central is connected to the peripheral
+    Serial.print("Connected to central: ");
+    Serial.println(central.address()); // print the central's BT address
+    digitalWrite(BluetoothStatus, HIGH); // turn on the LED to indicate the connection
+  } else {
+    digitalWrite(BluetoothStatus, LOW); // turn off the LED to connection is lost
+  }
+  
   Wire.beginTransmission(accel);
   Wire.write(0x32); // Prepare to get readings for sensor (address from data sheet)
   Wire.endTransmission(false);
@@ -41,40 +92,49 @@ void loop() {
   y = (int16_t)(Wire.read() | (Wire.read() << 8));
   z = (int16_t)(Wire.read() | (Wire.read() << 8));
   
+  /*
   Serial.print("x = "); // Print values
   Serial.print(x);
   Serial.print(", y = ");
   Serial.print(y);
   Serial.print(", z = ");
   Serial.println(z);
+  */
 
   total_acceleration = sqrt(2*x*x + 2*y*y + z*z);
-  Serial.println(total_acceleration);
+  //Serial.println(total_acceleration);
 
   if (total_acceleration > threshold && any_peak_detected == false) {
     steps = steps + 1;
     distance = steps*stridelength;
     any_peak_detected = true;
     last_step_time = millis();
-    digitalWrite(LEDPin, LOW);
+    digitalWrite(Idle_Indicator, LOW);
   }
 
   if (total_acceleration < threshold && any_peak_detected == true) {
     any_peak_detected = false;
-    
   }
 
   if (millis() - last_step_time > 5*60*1000) {
       //Turns the LED on
-      digitalWrite(LEDPin, HIGH);
+      digitalWrite(Idle_Indicator, HIGH);
   }
 
-  Serial.println(steps);
-  Serial.println(distance);
+  // Display metrics on the LCD Screen
+  //Serial.println(steps);
+  //Serial.println(distance);
   delay(50);
   lcd.setCursor(7,0);
   lcd.print(steps);
   lcd.setCursor(10,1);
   lcd.print(distance);
 
+  // Transmit metrics to connected device through Bluetooth
+  read_Steps.writeValue(steps);
+  read_Distance.writeValue(distance);
+  read_IdleTime.writeValue((millis() - last_step_time)/(60*1000)); 
+
+  Serial.println((millis() - last_step_time)/1000); 
+  
 }
