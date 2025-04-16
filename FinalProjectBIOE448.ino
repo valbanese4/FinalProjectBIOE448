@@ -68,7 +68,7 @@ void setup() {
   lcd.setCursor(0,1);
   lcd.print("Dist: ");
   pinMode(Idle_Indicator, OUTPUT); // red idle LED
-  pinMode(BluetoothStatus, OUTPUT); // red idle LED
+  pinMode(BluetoothStatus, OUTPUT); // bluetooth connection LED
 }
 
 void loop() {
