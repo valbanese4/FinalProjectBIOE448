@@ -7,9 +7,9 @@ LiquidCrystal lcd(10, 8, 5, 4, 3, 2);
 
 // Initializaion of Bluetooth
 BLEService newService("180A");
-BLEByteCharacteristic read_Steps("2A57", BLERead);
-BLEByteCharacteristic read_Distance("2A58", BLERead);
-BLEByteCharacteristic read_IdleTime("2A59", BLERead);
+BLEByteCharacteristic read_Steps("2A57", BLERead); // Steps
+BLEByteCharacteristic read_Distance("2A58", BLERead); // Distance
+BLEByteCharacteristic read_IdleTime("2A59", BLERead); // Idle Time
 
 
 // Initialization of Step Counter
@@ -20,12 +20,11 @@ float x, y, z;
 // Initialization of Additional Features
 float distance;
 float last_step_time;
-const int Idle_Indicator = 6;
-const int BluetoothStatus = 7;
-char command;
+const int Idle_Indicator = 6; // Red LED
+const int BluetoothStatus = 7; // White LED
 
 // Defining average stride length for women 
-float stridelength = 0.67; //meters
+float stridelength = 2.2; //feet
 
 // Initialization of Flags and Checkpoints
 int steps = 0;
@@ -42,7 +41,7 @@ void setup() {
     while(1);
   }
   
-  BLE.setLocalName("Pedometer3");
+  BLE.setLocalName("SuperPedometer");
   BLE.setAdvertisedService(newService);
   newService.addCharacteristic(read_Steps);
   newService.addCharacteristic(read_Distance);
@@ -67,7 +66,7 @@ void setup() {
   lcd.begin(16, 2); //Initiate the LCD in a 16x2 configuration
   lcd.print("Steps: ");
   lcd.setCursor(0,1);
-  lcd.print("Distance: ");
+  lcd.print("Dist: ");
   pinMode(Idle_Indicator, OUTPUT); // red idle LED
   pinMode(BluetoothStatus, OUTPUT); // red idle LED
 }
@@ -91,19 +90,11 @@ void loop() {
   x = (int16_t)(Wire.read() | (Wire.read() << 8));
   y = (int16_t)(Wire.read() | (Wire.read() << 8));
   z = (int16_t)(Wire.read() | (Wire.read() << 8));
-  
-  /*
-  Serial.print("x = "); // Print values
-  Serial.print(x);
-  Serial.print(", y = ");
-  Serial.print(y);
-  Serial.print(", z = ");
-  Serial.println(z);
-  */
 
+  // Total Acceleration 
   total_acceleration = sqrt(2*x*x + 2*y*y + z*z);
-  //Serial.println(total_acceleration);
 
+  // Peak Detection to Calculate Steps Taken
   if (total_acceleration > threshold && any_peak_detected == false) {
     steps = steps + 1;
     distance = steps*stridelength;
@@ -122,19 +113,17 @@ void loop() {
   }
 
   // Display metrics on the LCD Screen
-  //Serial.println(steps);
-  //Serial.println(distance);
   delay(50);
   lcd.setCursor(7,0);
   lcd.print(steps);
-  lcd.setCursor(10,1);
+  lcd.setCursor(6,1);
   lcd.print(distance);
+  lcd.setCursor(10,1);
+  lcd.print(" ft");
 
   // Transmit metrics to connected device through Bluetooth
   read_Steps.writeValue(steps);
   read_Distance.writeValue(distance);
-  read_IdleTime.writeValue((millis() - last_step_time)/(60*1000)); 
-
-  Serial.println((millis() - last_step_time)/1000); 
+  read_IdleTime.writeValue((millis() - last_step_time)/(60*1000));  
   
 }
